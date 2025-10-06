@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore The World - Full Stack Travel Platform</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=geometry,places,visualization"></script>
+    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+</head>
+<body>
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="auth-title">Login</h2>
+                <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="auth-form">
+                    <div class="form-group" id="name-group" style="display: none;">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="auth-name" class="form-control" placeholder="Enter your full name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="auth-email" class="form-control" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="auth-password" class="form-control" placeholder="Enter your password" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn--primary btn--full-width">
+                            <span id="auth-submit-text">Login</span>
+                        </button>
+                        <button type="button" class="btn btn--outline btn--full-width" id="auth-toggle">
+                            <span id="auth-toggle-text">Don't have an account? Register</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Destination Detail Modal -->
+    <div id="destination-modal" class="modal hidden">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modal-destination-name">Destination Details</h2>
+                <button class="modal-close" onclick="closeDestinationModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="destination-details"></div>
+                <div class="reviews-section">
+                    <div class="reviews-header">
+                        <h3>Reviews & Ratings</h3>
+                        <button class="btn btn--secondary btn--sm" onclick="showReviewForm()">Write Review</button>
+                    </div>
+                    <div id="review-form" class="review-form hidden">
+                        <h4>Write a Review</h4>
+                        <form onsubmit="submitReview(event)">
+                            <div class="form-group">
+                                <label class="form-label">Rating</label>
+                                <div class="rating-input">
+                                    <input type="radio" name="rating" value="5" id="star5"><label for="star5">⭐</label>
+                                    <input type="radio" name="rating" value="4" id="star4"><label for="star4">⭐</label>
+                                    <input type="radio" name="rating" value="3" id="star3"><label for="star3">⭐</label>
+                                    <input type="radio" name="rating" value="2" id="star2"><label for="star2">⭐</label>
+                                    <input type="radio" name="rating" value="1" id="star1"><label for="star1">⭐</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Comment</label>
+                                <textarea id="review-comment" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn--primary">Submit Review</button>
+                                <button type="button" class="btn btn--outline" onclick="hideReviewForm()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="reviews-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hero Section with 3D Globe -->
+    <section id="hero" class="hero">
+        <div class="hero-background">
+            <div id="globe-container" class="globe-container"></div>
+            <div class="stars"></div>
+        </div>
+        <div class="hero-content">
+            <h1 class="hero-title">Explore The World</h1>
+            <p class="hero-subtitle">Discover amazing destinations, plan your perfect journey, and share your experiences</p>
+            <div class="hero-actions">
+                <button class="btn btn--primary btn--lg hero-cta" onclick="scrollToDestinations()">Start Exploring</button>
+                <button class="btn btn--outline btn--lg" onclick="openAuthModal('login')" id="hero-auth-btn">Login / Register</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <h2 class="nav-logo">🌍 WorldExplorer</h2>
+                <div class="nav-center">
+                    <div class="nav-links">
+                        <a href="#destinations" class="nav-link">Destinations</a>
+                        <a href="#map" class="nav-link">Map</a>
+                        <a href="#" class="nav-link" onclick="showWishlist()">My Wishlist (<span id="wishlist-count">0</span>)</a>
+                        <a href="#" class="nav-link" onclick="showTrips()">My Trips</a>
+                    </div>
+                </div>
+                <div class="nav-actions">
+                    <div id="user-menu" class="user-menu hidden">
+                        <span id="user-name">User</span>
+                        <button class="btn btn--outline btn--sm" onclick="logout()">Logout</button>
+                    </div>
+                    <button id="login-btn" class="btn btn--primary btn--sm" onclick="openAuthModal('login')">Login</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search and Filters -->
+    <section id="filters" class="filters-section">
+        <div class="container">
+            <div class="filters-header">
+                <h2>Find Your Perfect Destination</h2>
+                <div class="filters-stats">
+                    <span id="results-count">25</span> destinations found
+                    <span class="separator">•</span>
+                    <span id="favorites-count">0</span> in wishlist
+                </div>
+            </div>
+            
+            <div class="filters-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" class="form-control" placeholder="Search destinations, countries, or descriptions...">
+                </div>
+                
+                <div class="filter-groups">
+                    <div class="filter-group">
+                        <label class="filter-label">Continent:</label>
+                        <div class="filter-buttons" id="continent-filters">
+                            <button class="filter-btn active" data-continent="All">All</button>
+                            <button class="filter-btn" data-continent="Asia">Asia</button>
+                            <button class="filter-btn" data-continent="Europe">Europe</button>
+                            <button class="filter-btn" data-continent="North America">North America</button>
+                            <button class="filter-btn" data-continent="South America">South America</button>
+                            <button class="filter-btn" data-continent="Africa">Africa</button>
+                            <button class="filter-btn" data-continent="Oceania">Oceania</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Category:</label>
+                        <div class="filter-buttons" id="category-filters">
+                            <button class="filter-btn active" data-category="All">All</button>
+                            <button class="filter-btn" data-category="Historical">Historical</button>
+                            <button class="filter-btn" data-category="Natural">Natural</button>
+                            <button class="filter-btn" data-category="Modern">Modern</button>
+                            <button class="filter-btn" data-category="Spiritual">Spiritual</button>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Rating:</label>
+                        <div class="filter-buttons" id="rating-filters">
+                            <button class="filter-btn active" data-rating="All">All Ratings</button>
+                            <button class="filter-btn" data-rating="4.8">4.8+ ⭐</button>
+                            <button class="filter-btn" data-rating="4.5">4.5+ ⭐</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Destinations Grid -->
+    <section id="destinations" class="destinations-section">
+        <div class="container">
+            <div class="destinations-grid" id="destinations-grid">
+                <!-- Destination cards will be populated by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Map Section -->
+    <section id="map" class="map-section">
+        <div class="container">
+            <div class="map-header">
+                <h2>Interactive Travel Map</h2>
+                <div class="map-controls">
+                    <div class="travel-modes">
+                        <button class="mode-btn active" data-mode="DRIVING">🚗 Driving</button>
+                        <button class="mode-btn" data-mode="WALKING">🚶 Walking</button>
+                        <button class="mode-btn" data-mode="TRANSIT">🚌 Transit</button>
+                        <button class="mode-btn" data-mode="BICYCLING">🚴 Cycling</button>
+                    </div>
+                    <button class="btn btn--secondary" id="traffic-toggle">Toggle Traffic</button>
+                    <button class="btn btn--outline" id="clear-route">Clear Route</button>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div id="google-map" class="google-map"></div>
+                <div class="route-info" id="route-info" style="display: none;">
+                    <h4>Route Information</h4>
+                    <div id="route-details"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trip Planning Section -->
+    <section id="trip-planning" class="trip-planning-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Plan Your Journey</h2>
+                <button class="btn btn--primary" onclick="createNewTrip()" id="new-trip-btn" style="display: none;">Create New Trip</button>
+            </div>
+            <div id="trips-container">
+                <div class="trip-placeholder">
+                    <h3>Start Planning Your Adventure</h3>
+                    <p>Login to create custom trip plans and save your favorite destinations</p>
+                    <button class="btn btn--primary" onclick="openAuthModal('login')">Get Started</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p id="loading-message">Loading amazing destinations...</p>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <div id="message-toast" class="message-toast hidden">
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
