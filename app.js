@@ -768,21 +768,49 @@ function updateResultsCounter() {
 }
 
 function renderDestinationCards() {
-    const container = document.getElementById('destinations-container');
+    const container = document.getElementById('destinations-grid');
     if (!container) return;
 
-    container.innerHTML = allDestinations.map(destination => {
-        // Choose the first image from 'images' array; fallback to 'imageUrl' if not available
-        const imageUrl = destination.images && destination.images.length ? destination.images[0] : destination.imageUrl;
+    const list = (filteredDestinations && filteredDestinations.length) ? filteredDestinations : allDestinations;
+
+    container.innerHTML = list.map(destination => {
+        const imageUrl = (destination.images && destination.images.length) ? destination.images[0] : (destination.imageUrl || '');
+        const inWishlist = isInWishlist(destination.id);
+        const roundedRating = Math.round(destination.rating);
+        const stars = '⭐'.repeat(roundedRating);
+        const shortDesc = destination.description && destination.description.length > 120 ? destination.description.slice(0, 117) + '...' : (destination.description || '');
+
         return `
-        <div class="destination-card">
-            <div class="destination-image" style="background-image: url('${imageUrl}');"></div>
-            <div class="destination-info">
-                <h3>${destination.name}</h3>
-                <p>${destination.description}</p>
-                <button onclick="showDestinationDetails(${destination.id})">More Details</button>
+        <article class="destination-card card" aria-labelledby="dest-${destination.id}-title">
+            <div class="card-image" style="background-image: url('${imageUrl}');">
+                <div class="card-image-overlay">
+                    <button class="favorite-btn ${inWishlist ? 'favorited' : ''}" aria-pressed="${inWishlist}" aria-label="${inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}" onclick="toggleWishlist(${destination.id})">
+                        ${inWishlist ? '♥' : '♡'}
+                    </button>
+                    <div class="card-rating" title="Rating: ${destination.rating}">
+                        <span class="score">${destination.rating}</span>
+                        <span class="stars">${stars}</span>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <div class="card-content">
+                <header class="card-header">
+                    <h3 id="dest-${destination.id}-title" class="card-title">${destination.name}</h3>
+                    <div class="card-location">${destination.country} • ${destination.continent}</div>
+                </header>
+
+                <div class="card-info">
+                    <div class="category-badge ${destination.category ? destination.category.toLowerCase() : ''}">${destination.category || ''}</div>
+                    <p class="card-description">${shortDesc}</p>
+                </div>
+
+                <div class="card-actions">
+                    <button class="plan-route-btn btn btn--secondary" onclick="planRoute(${destination.id})">Plan Route</button>
+                    <button class="view-details-btn btn btn--primary" onclick="showDestinationDetails(${destination.id})">View</button>
+                </div>
+            </div>
+        </article>
         `;
     }).join('');
 }
