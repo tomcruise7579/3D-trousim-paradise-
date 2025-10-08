@@ -1431,6 +1431,11 @@ async function submitReview(event) {
     }
 }
 
+// Expose functions to global scope for inline event handlers
+window.showDestinationDetails = showDestinationDetails;
+window.planRoute = planRoute;
+window.toggleWishlist = toggleWishlist;
+
 // ===========================================
 // WISHLIST FUNCTIONALITY
 // ===========================================
