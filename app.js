@@ -8,8 +8,6 @@ const DATABASE = {
         {"id": 1, "name": "Taj Mahal", "country": "India", "continent": "Asia", "lat": 27.1751, "lng": 78.0421, "category": "Historical", "rating": 4.9, "description": "Magnificent ivory-white marble mausoleum, UNESCO World Heritage Site", "images": ["https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800", "https://images.unsplash.com/photo-1548013146-72479768bada?w=800", "https://images.unsplash.com/photo-1585135497273-1a86b09fe70e?w=800", "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800", "https://images.unsplash.com/photo-1506462945848-ac8ea6f609cc?w=800"]},
         {"id": 2, "name": "Great Wall of China", "country": "China", "continent": "Asia", "lat": 40.4319, "lng": 116.5704, "category": "Historical", "rating": 4.8, "description": "Ancient fortification stretching over 13,000 miles", "images": ["https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800", "https://images.unsplash.com/photo-1467803738586-46b7eb7b16a1?w=800", "https://images.unsplash.com/photo-1571832744758-97111209befd?w=800", "https://images.unsplash.com/photo-1547981609-4b6bfe67ca0b?w=800"]},
         {"id": 3, "name": "Tokyo Tower", "country": "Japan", "continent": "Asia", "lat": 35.6586, "lng": 139.7454, "category": "Modern", "rating": 4.6, "description": "Communications tower inspired by Eiffel Tower", "images": ["https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800", "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?w=800", "https://images.unsplash.com/photo-1542931287-023b922fa89b?w=800", "https://images.unsplash.com/photo-1513407030348-c983a97b98d8?w=800"]},
-        {"id": 2, "name": "Great Wall of China", "country": "China", "continent": "Asia", "lat": 40.4319, "lng": 116.5704, "category": "Historical", "rating": 4.8, "description": "Ancient fortification stretching over 13,000 miles", "imageUrl": "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800"},
-        {"id": 3, "name": "Tokyo Tower", "country": "Japan", "continent": "Asia", "lat": 35.6586, "lng": 139.7454, "category": "Modern", "rating": 4.6, "description": "Communications tower inspired by Eiffel Tower", "imageUrl": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800"},
         {"id": 4, "name": "Angkor Wat", "country": "Cambodia", "continent": "Asia", "lat": 13.4125, "lng": 103.8670, "category": "Historical", "rating": 4.9, "description": "Largest religious monument in the world", "imageUrl": "https://images.unsplash.com/photo-1539650116574-75c0c6d68e5d?w=800"},
         {"id": 5, "name": "Burj Khalifa", "country": "UAE", "continent": "Asia", "lat": 25.1972, "lng": 55.2744, "category": "Modern", "rating": 4.7, "description": "World's tallest building at 828 meters", "imageUrl": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800"},
         {"id": 6, "name": "Eiffel Tower", "country": "France", "continent": "Europe", "lat": 48.8584, "lng": 2.2945, "category": "Modern", "rating": 4.8, "description": "Iconic iron lattice tower, symbol of Paris", "imageUrl": "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800"},
@@ -373,7 +371,6 @@ let currentUser = null;
 let currentTravelMode = 'DRIVING';
 let trafficLayer;
 let markers = [];
-let currentDestination = null;
 
 // 3D Globe variables
 let scene, camera, renderer, globe, controls;
@@ -1234,7 +1231,6 @@ function getUserLocation() {
 
 // Gallery state
 let currentImageIndex = 0;
-let currentDestination = null;
 
 // Gallery functions
 function changeImage(direction) {
@@ -1289,9 +1285,7 @@ function setImage(index) {
     }
 }
 
-async let currentImageIndex = 0;
-
-function showDestinationDetails(destinationId) {
+async function showDestinationDetails(destinationId) {
     try {
         const response = await api.getPlace(destinationId);
         if (!response.success) {
@@ -1303,7 +1297,7 @@ function showDestinationDetails(destinationId) {
         currentDestination = destination;
         
         const modal = document.getElementById('destination-modal');
-        const modalName = document.getElementById('modal-destination-name');
+        const modalName = document.getElementById('modal-destination_name');
         const detailsContainer = document.getElementById('destination-details');
         const reviewsList = document.getElementById('reviews-list');
         
