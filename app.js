@@ -768,54 +768,23 @@ function updateResultsCounter() {
 }
 
 function renderDestinationCards() {
-    const grid = document.getElementById('destinations-grid');
-    if (!grid) return;
-    
-    if (filteredDestinations.length === 0) {
-        grid.innerHTML = `
-            <div style="grid-column: 1 / -1; text-align: center; padding: 48px; color: var(--color-text-secondary);">
-                <h3>No destinations found</h3>
-                <p>Try adjusting your search or filter criteria</p>
-                <button class="btn btn--primary" onclick="resetFilters()">Show All Destinations</button>
-            </div>
-        `;
-        return;
-    }
-    
-    grid.innerHTML = filteredDestinations.map(destination => `
+    const container = document.getElementById('destinations-container');
+    if (!container) return;
+
+    container.innerHTML = allDestinations.map(destination => {
+        // Choose the first image from 'images' array; fallback to 'imageUrl' if not available
+        const imageUrl = destination.images && destination.images.length ? destination.images[0] : destination.imageUrl;
+        return `
         <div class="destination-card">
-            <div class="card-image">
-                ${getDestinationEmoji(destination.category)}
-            </div>
-            <div class="card-content">
-                <div class="card-header">
-                    <h3 class="card-title">${destination.name}</h3>
-                    <button class="favorite-btn ${isInWishlist(destination.id) ? 'favorited' : ''}" 
-                            onclick="event.stopPropagation(); toggleWishlist(${destination.id})"
-                            title="Add to wishlist">
-                        ❤️
-                    </button>
-                </div>
-                <div class="card-info">
-                    <span class="card-location">${destination.country}, ${destination.continent}</span>
-                    <div class="card-rating">
-                        <span>⭐</span>
-                        <span>${destination.rating}</span>
-                    </div>
-                </div>
-                <div class="category-badge ${destination.category.toLowerCase()}">${destination.category}</div>
-                <p class="card-description">${destination.description}</p>
-                <div class="card-actions">
-                    <button class="btn btn--primary view-details-btn" onclick="showDestinationDetails(${destination.id})">
-                        View Details
-                    </button>
-                    <button class="btn btn--outline plan-route-btn" onclick="event.stopPropagation(); planRoute(${destination.id})">
-                        Plan Route
-                    </button>
-                </div>
+            <div class="destination-image" style="background-image: url('${imageUrl}');"></div>
+            <div class="destination-info">
+                <h3>${destination.name}</h3>
+                <p>${destination.description}</p>
+                <button onclick="showDestinationDetails(${destination.id})">More Details</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function resetFilters() {
