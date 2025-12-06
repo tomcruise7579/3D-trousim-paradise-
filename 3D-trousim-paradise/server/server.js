@@ -1,37 +1,102 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
+const dotenv = require('dotenv');
 const path = require('path');
+const seedDatabase = require('../utils/seedDatabase');
 
-// Create an instance of the express application
+// Load environment variables
+dotenv.config();
+
+// Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/travel-paradise';
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true
+}));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Simulated Database (In-Memory Storage)
-const DATABASE = {
-    destinations: [
-        {"id": 1, "name": "Taj Mahal", "country": "India", "continent": "Asia", "lat": 27.1751, "lng": 78.0421, "category": "Historical", "rating": 4.9, "description": "Magnificent ivory-white marble mausoleum, UNESCO World Heritage Site", "images": ["https://images.unsplash.com/photo-1564507592333-c60657eea523?w=800"]},
-        {"id": 2, "name": "Great Wall of China", "country": "China", "continent": "Asia", "lat": 40.4319, "lng": 116.5704, "category": "Historical", "rating": 4.8, "description": "Ancient fortification stretching over 13,000 miles", "images": ["https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800"]},
-        {"id": 3, "name": "Eiffel Tower", "country": "France", "continent": "Europe", "lat": 48.8584, "lng": 2.2945, "category": "Modern", "rating": 4.8, "description": "Iconic iron lattice tower, symbol of Paris", "images": ["https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800"]},
-        // Add more destinations as needed
-    ]
-};
-
-// API endpoint to fetch beautiful destinations
-app.get('/api/destinations', (req, res) => {
-    res.json(DATABASE.destinations);
+// Database connection
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => {
+    console.log('✓ Connected to MongoDB');
+    // Seed database on startup
+    return seedDatabase();
+})
+.catch(error => {
+    console.error('✗ MongoDB connection error:', error);
+    process.exit(1);
 });
 
-// Serve the main HTML file
+// Database models - ensure they're loaded
+const User = require('../models/User');
+const Destination = require('../models/Destination');
+const Review = require('../models/Review');
+const Trip = require('../models/Trip');
+
+// Middleware
+const authMiddleware = require('../middleware/auth');
+
+// API Routes
+app.use('/api/destinations', require('../routes/destinations'));
+app.use('/api/auth', require('../routes/auth'));
+app.use('/api/reviews', require('../routes/reviews'));
+app.use('/api/wishlist', authMiddleware, require('../routes/wishlist'));
+app.use('/api/trips', authMiddleware, require('../routes/trips'));
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: 'Server is running',
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+});
+
+// Serve main HTML file
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Internal Server Error'
+    });
 });
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        error: 'Route not found'
+    });
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`\n🌍 Travel Paradise Server`);
+    console.log(`✓ Server running on http://localhost:${PORT}`);
+    console.log(`✓ MongoDB: ${MONGODB_URI}`);
+    console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}\n`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n✓ Server shutting down gracefully...');
+    mongoose.connection.close();
+    process.exit(0);
+});
+
+module.exports = app;

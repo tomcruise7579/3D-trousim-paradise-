@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beautiful Destinations</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0RG4wd4i7kWzO-X8HYAf9VqsnuQ5-_Rc=geometry,places,visualization"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0RG4wd4i7kWzO-X8HYAf9VqsnuQ5-_Rc&libraries=geometry,places,visualization"></script>
+    <script src="api-client.js"></script>
     <script src="app.js" defer></script>
 </head>
 <body>
@@ -13,8 +14,26 @@
         <h1>Explore Beautiful Destinations</h1>
     </header>
     <main>
+        <section class="filters-section">
+            <input type="text" id="search-input" placeholder="Search destinations...">
+            <select id="continent-filter"><option value="All">All Continents</option></select>
+            <select id="category-filter"><option value="All">All Categories</option></select>
+            <select id="rating-filter"><option value="All">All Ratings</option></select>
+        </section>
         <section id="destinations-grid">
             <!-- Destination cards will be dynamically inserted here -->
+        </section>
+        <section id="pagination-section" style="display: none;">
+            <button id="prev-page-btn">← Previous</button>
+            <span id="pagination-dots" class="pagination-dots"></span>
+            <button id="next-page-btn">Next →</button>
+            <span id="pagination-info">Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+            <select id="items-per-page">
+                <option value="10">10 per page</option>
+                <option value="15">15 per page</option>
+                <option value="20">20 per page</option>
+                <option value="30">30 per page</option>
+            </select>
         </section>
         <section id="map-section">
             <div id="google-map" style="width: 100%; height: 400px;"></div>

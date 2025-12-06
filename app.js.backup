@@ -413,7 +413,7 @@ async function loadInitialData() {
     showLoading('Loading destinations...');
     
     try {
-        const response = await travelAPI.getDestinations(1, 100);
+        const response = await api.getPlaces();
         if (response.success) {
             allDestinations = response.places;
             filteredDestinations = [...allDestinations];
@@ -435,13 +435,13 @@ async function loadUserData() {
 
     try {
         // Load wishlist
-        const wishlistResponse = await travelAPI.getWishlist();
+        const wishlistResponse = await api.getWishlist();
         if (wishlistResponse.success) {
             updateWishlistUI(wishlistResponse.wishlist);
         }
 
         // Load trips
-        const tripsResponse = await travelAPI.getTrips();
+        const tripsResponse = await api.getTrips();
         if (tripsResponse.success) {
             updateTripsUI(tripsResponse.trips);
         }
@@ -734,7 +734,7 @@ async function filterDestinations(newFilters = {}) {
     const filters = { ...currentFilters, ...newFilters };
     
     try {
-        const response = await travelAPI.getDestinations(1, 100, filters);
+        const response = await api.getPlaces(filters);
         if (response.success) {
             filteredDestinations = response.places;
             renderDestinationCards();
@@ -1284,7 +1284,7 @@ function setImage(index) {
 
 async function showDestinationDetails(destinationId) {
     try {
-        const response = await travelAPI.getDestination(destinationId);
+        const response = await api.getPlace(destinationId);
         if (!response.success) {
             showToast('Error loading destination details', 'error');
             return;
@@ -1294,7 +1294,7 @@ async function showDestinationDetails(destinationId) {
         currentDestination = destination;
         
         const modal = document.getElementById('destination-modal');
-        const modalName = document.getElementById('modal-destination-name');
+        const modalName = document.getElementById('modal-destination_name');
         const detailsContainer = document.getElementById('destination-details');
         const reviewsList = document.getElementById('reviews-list');
         
@@ -1333,8 +1333,8 @@ async function showDestinationDetails(destinationId) {
         `;
         
         // Load and display reviews
-        const reviewsResponse = await travelAPI.getReviews(destinationId);
-        if (reviewsResponse.success && reviewsResponse.reviews) {
+        const reviewsResponse = await api.getReviews(destinationId);
+        if (reviewsResponse.success) {
             displayReviews(reviewsResponse.reviews);
         }
         
@@ -1407,18 +1407,18 @@ async function submitReview(event) {
     }
     
     try {
-        const response = await travelAPI.createReview(
-            currentDestination._id || currentDestination.id,
-            parseInt(rating),
+        const response = await api.createReview({
+            placeId: currentDestination.id,
+            rating: parseInt(rating),
             comment
-        );
+        });
         
         if (response.success) {
             showToast('Review submitted successfully!', 'success');
             hideReviewForm();
             
             // Refresh reviews
-            const reviewsResponse = await travelAPI.getReviews(currentDestination._id || currentDestination.id);
+            const reviewsResponse = await api.getReviews(currentDestination.id);
             if (reviewsResponse.success) {
                 displayReviews(reviewsResponse.reviews);
             }
@@ -1478,7 +1478,7 @@ async function showWishlist() {
     }
     
     try {
-        const response = await travelAPI.getWishlist();
+        const response = await api.getWishlist();
         if (response.success) {
             filteredDestinations = response.wishlist;
             renderDestinationCards();

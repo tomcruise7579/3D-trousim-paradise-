@@ -1,25 +1,33 @@
 {
-  "name": "3D-trousim-paradise",
-  "version": "1.0.0",
-  "description": "A web application to explore beautiful destinations in a 3D environment.",
+  "name": "travel-paradise",
+  "version": "2.0.0",
+  "description": "Full-stack travel exploration platform with MongoDB, 3D globe, and pagination",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "dev": "nodemon server/server.js"
-  },
-  "dependencies": {
-    "express": "^4.17.1",
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.7"
+    "dev": "nodemon server/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "3D",
     "travel",
     "destinations",
-    "web application"
+    "mongodb",
+    "express",
+    "three.js",
+    "google-maps",
+    "pagination"
   ],
-  "author": "Your Name",
-  "license": "MIT"
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
 }

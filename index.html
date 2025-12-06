@@ -188,6 +188,32 @@
             <div class="destinations-grid" id="destinations-grid">
                 <!-- Destination cards will be populated by JavaScript -->
             </div>
+            
+            <!-- Pagination Controls -->
+            <div class="pagination-section" id="pagination-section" style="display: none; margin-top: 40px; text-align: center;">
+                <div class="pagination-controls">
+                    <button class="pagination-btn" id="prev-page-btn" onclick="previousPage()">← Previous</button>
+                    
+                    <div class="pagination-info">
+                        <span>Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                        <div class="pagination-size-control" style="margin-top: 12px;">
+                            <label for="items-per-page">Items per page:</label>
+                            <select id="items-per-page" onchange="changeItemsPerPage()">
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button class="pagination-btn" id="next-page-btn" onclick="nextPage()">Next →</button>
+                </div>
+                
+                <div class="pagination-dots" id="pagination-dots" style="margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                    <!-- Page dots will be generated here -->
+                </div>
+            </div>
         </div>
     </section>
 
@@ -246,6 +272,7 @@
         <span id="toast-message"></span>
     </div>
 
+    <script src="api-client.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
