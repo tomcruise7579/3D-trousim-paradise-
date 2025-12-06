@@ -781,10 +781,10 @@ function renderDestinationCards() {
         const shortDesc = destination.description && destination.description.length > 120 ? destination.description.slice(0, 117) + '...' : (destination.description || '');
 
         return `
-        <article class="destination-card card" aria-labelledby="dest-${destination.id}-title">
+        <article class="destination-card card" aria-labelledby="dest-${destination.id}-title" onclick="showQuickView('${destination._id || destination.id}')">
             <div class="card-image" style="background-image: url('${imageUrl}');">
                 <div class="card-image-overlay">
-                    <button class="favorite-btn ${inWishlist ? 'favorited' : ''}" aria-pressed="${inWishlist}" aria-label="${inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}" onclick="toggleWishlist(${destination.id})">
+                    <button class="favorite-btn ${inWishlist ? 'favorited' : ''}" aria-pressed="${inWishlist}" aria-label="${inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}" onclick="event.stopPropagation(); toggleWishlist('${destination._id || destination.id}')">
                         ${inWishlist ? '♥' : '♡'}
                     </button>
                     <div class="card-rating" title="Rating: ${destination.rating}">
@@ -806,8 +806,8 @@ function renderDestinationCards() {
                 </div>
 
                 <div class="card-actions">
-                    <button class="plan-route-btn btn btn--secondary" onclick="planRoute(${destination.id})">Plan Route</button>
-                    <button class="view-details-btn btn btn--primary" onclick="showDestinationDetails(${destination.id})">View</button>
+                    <button class="plan-route-btn btn btn--secondary" onclick="event.stopPropagation(); planRoute('${destination._id || destination.id}')">Plan Route</button>
+                    <button class="view-details-btn btn btn--primary" onclick="event.stopPropagation(); showDestinationDetails('${destination._id || destination.id}')">View Details</button>
                 </div>
             </div>
         </article>
@@ -1627,8 +1627,11 @@ function planRoute(destinationId) {
         return;
     }
     
-    const destination = DATABASE.destinations.find(d => d.id === destinationId);
-    if (!destination) return;
+    const destination = filteredDestinations.find(d => (d._id || d.id) === destinationId) || DATABASE.destinations.find(d => (d._id || d.id) === destinationId);
+    if (!destination) {
+        showToast('Destination not found', 'error');
+        return;
+    }
     
     const request = {
         origin: userLocation,
@@ -1646,10 +1649,13 @@ function planRoute(destinationId) {
         }
     });
     
-    document.getElementById('map').scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start'
-    });
+    const mapContainer = document.getElementById('google-map');
+    if (mapContainer) {
+        mapContainer.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }
 }
 
 function displayRouteInfo(leg, destination) {
@@ -1750,6 +1756,143 @@ function formatDate(dateString) {
         month: 'short',
         day: 'numeric'
     });
+}
+
+// ===========================================
+// QUICK VIEW MODAL FUNCTIONALITY
+// ===========================================
+
+let currentQuickViewDestination = null;
+let currentGalleryIndex = 0;
+
+async function showQuickView(destinationId) {
+    try {
+        // Find destination in all destinations or filtered list
+        let destination = allDestinations.find(d => d._id === destinationId || d.id === destinationId);
+        
+        if (!destination) {
+            // If not found locally, fetch from API
+            const response = await travelAPI.getDestination(destinationId);
+            if (response.success) {
+                destination = response.place;
+            } else {
+                showToast('Error loading destination', 'error');
+                return;
+            }
+        }
+        
+        currentQuickViewDestination = destination;
+        currentGalleryIndex = 0;
+        
+        // Populate quick view
+        document.getElementById('qv-destination-name').textContent = destination.name;
+        document.getElementById('qv-destination-location').textContent = `${destination.country} • ${destination.continent}`;
+        document.getElementById('qv-rating').textContent = destination.rating;
+        
+        const roundedRating = Math.round(destination.rating);
+        document.getElementById('qv-stars').textContent = '⭐'.repeat(roundedRating);
+        
+        document.getElementById('qv-category').textContent = destination.category;
+        document.getElementById('qv-category').className = `category-badge ${destination.category.toLowerCase()}`;
+        document.getElementById('qv-continent').textContent = destination.continent;
+        document.getElementById('qv-country').textContent = destination.country;
+        document.getElementById('qv-description').textContent = destination.description;
+        
+        // Update wishlist button
+        const inWishlist = isInWishlist(destinationId);
+        const wishlistBtn = document.getElementById('qv-wishlist-btn');
+        wishlistBtn.textContent = inWishlist ? '♥ In Wishlist' : '♡ Add to Wishlist';
+        wishlistBtn.classList.toggle('active', inWishlist);
+        
+        // Setup gallery
+        setupGallery(destination.images || []);
+        
+        // Show modal
+        const modal = document.getElementById('destination-quick-view');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    } catch (error) {
+        console.error('Error showing quick view:', error);
+        showToast('Error loading destination details', 'error');
+    }
+}
+
+function setupGallery(images) {
+    const mainImage = document.getElementById('gallery-main-image');
+    const thumbnails = document.getElementById('gallery-thumbnails');
+    
+    if (!images || images.length === 0) {
+        mainImage.src = 'https://via.placeholder.com/500x400?text=No+Image';
+        thumbnails.innerHTML = '';
+        return;
+    }
+    
+    mainImage.src = images[0];
+    
+    thumbnails.innerHTML = images.map((img, index) => `
+        <img src="${img}" alt="Gallery ${index + 1}" class="thumbnail ${index === 0 ? 'active' : ''}" onclick="selectGalleryImage(${index})">
+    `).join('');
+}
+
+function selectGalleryImage(index) {
+    const images = currentQuickViewDestination.images || [];
+    if (index >= 0 && index < images.length) {
+        currentGalleryIndex = index;
+        document.getElementById('gallery-main-image').src = images[index];
+        
+        // Update thumbnail highlights
+        document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+            thumb.classList.toggle('active', i === index);
+        });
+    }
+}
+
+function nextGalleryImage() {
+    const images = currentQuickViewDestination.images || [];
+    currentGalleryIndex = (currentGalleryIndex + 1) % images.length;
+    selectGalleryImage(currentGalleryIndex);
+}
+
+function previousGalleryImage() {
+    const images = currentQuickViewDestination.images || [];
+    currentGalleryIndex = (currentGalleryIndex - 1 + images.length) % images.length;
+    selectGalleryImage(currentGalleryIndex);
+}
+
+function closeQuickView() {
+    const modal = document.getElementById('destination-quick-view');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    currentQuickViewDestination = null;
+}
+
+function toggleWishlistFromQV() {
+    if (!currentQuickViewDestination) return;
+    
+    const destId = currentQuickViewDestination._id || currentQuickViewDestination.id;
+    toggleWishlist(destId);
+    
+    // Update button state
+    const inWishlist = isInWishlist(destId);
+    const wishlistBtn = document.getElementById('qv-wishlist-btn');
+    wishlistBtn.textContent = inWishlist ? '♥ In Wishlist' : '♡ Add to Wishlist';
+    wishlistBtn.classList.toggle('active', inWishlist);
+}
+
+function routeFromQV() {
+    if (!currentQuickViewDestination) return;
+    
+    const destId = currentQuickViewDestination._id || currentQuickViewDestination.id;
+    closeQuickView();
+    planRoute(destId);
+}
+
+function openFullDetails() {
+    if (!currentQuickViewDestination) return;
+    
+    const destId = currentQuickViewDestination._id || currentQuickViewDestination.id;
+    closeQuickView();
+    showDestinationDetails(destId);
 }
 
 // Initialize on load

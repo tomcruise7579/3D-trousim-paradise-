@@ -6,7 +6,7 @@
     <title>Explore The World - Full Stack Travel Platform</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0RG4wd4i7kWzO-X8HYAf9VqsnuQ5-_Rc=geometry,places,visualization"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB0RG4wd4i7kWzO-X8HYAf9VqsnuQ5-_Rc&libraries=geometry,places,visualization"></script>
     <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
 </head>
 <body>
@@ -40,6 +40,56 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Destination Quick View Card -->
+    <div id="destination-quick-view" class="modal hidden">
+        <div class="modal-content modal-quick-view">
+            <button class="modal-close" onclick="closeQuickView()">&times;</button>
+            <div class="quick-view-gallery">
+                <div class="gallery-main">
+                    <img id="gallery-main-image" src="" alt="destination" class="main-image">
+                    <button class="gallery-nav gallery-prev" onclick="previousGalleryImage()">❮</button>
+                    <button class="gallery-nav gallery-next" onclick="nextGalleryImage()">❯</button>
+                </div>
+                <div class="gallery-thumbnails" id="gallery-thumbnails"></div>
+            </div>
+            <div class="quick-view-content">
+                <div class="quick-view-header">
+                    <div>
+                        <h2 id="qv-destination-name">Destination Name</h2>
+                        <p id="qv-destination-location" class="location-info">Location</p>
+                    </div>
+                    <div class="quick-view-rating">
+                        <span id="qv-rating" class="rating-score">4.8</span>
+                        <span id="qv-stars" class="rating-stars">⭐⭐⭐⭐</span>
+                    </div>
+                </div>
+                <div class="quick-view-details">
+                    <div class="detail-item">
+                        <strong>Category:</strong>
+                        <span id="qv-category" class="category-badge">Historical</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Continent:</strong>
+                        <span id="qv-continent">Asia</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Country:</strong>
+                        <span id="qv-country">India</span>
+                    </div>
+                </div>
+                <div class="quick-view-description">
+                    <h3>About</h3>
+                    <p id="qv-description">Description goes here...</p>
+                </div>
+                <div class="quick-view-actions">
+                    <button class="btn btn--primary" id="qv-wishlist-btn" onclick="toggleWishlistFromQV()">♡ Add to Wishlist</button>
+                    <button class="btn btn--secondary" onclick="routeFromQV()">🗺️ Plan Route</button>
+                    <button class="btn btn--outline" onclick="openFullDetails()">View Full Details</button>
+                </div>
             </div>
         </div>
     </div>
