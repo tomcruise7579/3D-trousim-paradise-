@@ -1341,6 +1341,7 @@ async function showDestinationDetails(destinationId) {
         
         modalName.textContent = destination.name;
         
+        const isWishlisted = isInWishlist(destination.id);
         detailsContainer.innerHTML = `
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
                 <div>
@@ -1356,14 +1357,14 @@ async function showDestinationDetails(destinationId) {
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="color: var(--color-warning); font-size: 18px;">⭐</span>
                         <span style="font-weight: 500; font-size: 18px;">${destination.rating}</span>
-                        <span style="color: var(--color-text-secondary);">(${destination.reviewCount || 0} reviews)</span>
+                        <span class="review-count" style="color: var(--color-text-secondary);">(${destination.reviewCount || 0} reviews)</span>
                     </div>
                 </div>
                 <div>
                     <h4 style="margin: 0 0 8px 0;">Actions</h4>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn btn--primary btn--sm" onclick="planRoute(${destination.id})">Plan Route</button>
-                        <button class="btn btn--outline btn--sm" onclick="toggleWishlist(${destination.id})">${isInWishlist(destination.id) ? 'Remove from' : 'Add to'} Wishlist</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn--primary btn--sm" onclick="planRoute(${destination.id})">🗺️ Plan Route</button>
+                        <button class="btn btn--outline btn--sm" id="wishlist-modal-btn" onclick="toggleWishlist(${destination.id})" style="white-space: nowrap;">${isWishlisted ? '♥ In Wishlist' : '♡ Add to Wishlist'}</button>
                     </div>
                 </div>
             </div>
@@ -1391,21 +1392,29 @@ function displayReviews(reviews) {
     
     if (reviews.length === 0) {
         reviewsList.innerHTML = '<p style="text-align: center; color: var(--color-text-secondary); padding: 24px;">No reviews yet. Be the first to share your experience!</p>';
-        return;
+    } else {
+        reviewsList.innerHTML = reviews.map(review => `
+            <div class="review-item">
+                <div class="review-header">
+                    <div>
+                        <strong>${review.userName}</strong>
+                        <div class="review-rating">${'⭐'.repeat(review.rating)} ${review.rating}/5</div>
+                    </div>
+                    <div class="review-date">${formatDate(review.createdAt)}</div>
+                </div>
+                <p class="review-comment">${review.comment}</p>
+            </div>
+        `).join('');
     }
     
-    reviewsList.innerHTML = reviews.map(review => `
-        <div class="review-item">
-            <div class="review-header">
-                <div>
-                    <strong>${review.userName}</strong>
-                    <div class="review-rating">${'⭐'.repeat(review.rating)} ${review.rating}/5</div>
-                </div>
-                <div class="review-date">${formatDate(review.createdAt)}</div>
-            </div>
-            <p class="review-comment">${review.comment}</p>
-        </div>
-    `).join('');
+    // Update review count in modal header if destination is loaded
+    if (currentDestination) {
+        currentDestination.reviewCount = reviews.length;
+        const reviewCountSpan = document.querySelector('[id="modal-destination-name"]')?.nextElementSibling?.querySelector('.review-count');
+        if (reviewCountSpan) {
+            reviewCountSpan.textContent = `(${reviews.length} reviews)`;
+        }
+    }
 }
 
 function closeDestinationModal() {
@@ -1423,6 +1432,15 @@ function showReviewForm() {
     
     const reviewForm = document.getElementById('review-form');
     reviewForm.classList.remove('hidden');
+    
+    // Clear previous selections
+    document.querySelectorAll('input[name="rating"]').forEach(input => input.checked = false);
+    document.getElementById('review-comment').value = '';
+    
+    // Auto-focus on comment field
+    setTimeout(() => {
+        document.getElementById('review-comment').focus();
+    }, 100);
 }
 
 function hideReviewForm() {
@@ -1504,6 +1522,16 @@ async function toggleWishlist(destinationId) {
             showToast(response.message, 'success');
             renderDestinationCards(); // Re-render to update heart icons
             updateWishlistCount();
+            
+            // Update modal if it's open with better selector
+            if (currentDestination && !document.getElementById('destination-modal').classList.contains('hidden')) {
+                const isNowInWishlist = isInWishlist(numericId);
+                const wishlistBtn = document.getElementById('wishlist-modal-btn');
+                if (wishlistBtn) {
+                    wishlistBtn.textContent = isNowInWishlist ? '♥ In Wishlist' : '♡ Add to Wishlist';
+                    wishlistBtn.classList.toggle('favorited', isNowInWishlist);
+                }
+            }
         } else {
             showToast('Error updating wishlist: ' + response.error, 'error');
         }
