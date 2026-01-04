@@ -369,6 +369,7 @@ let filteredDestinations = [];
 let allDestinations = []; // Store all destinations
 let currentUser = null;
 let currentTravelMode = 'DRIVING';
+let currentRouteDestination = null; // Track active route destination
 let trafficLayer;
 let markers = [];
 
@@ -400,6 +401,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize map with delay
     setTimeout(() => {
+        console.log('Attempting to initialize map...');
+        console.log('Google Maps loaded:', typeof google !== 'undefined' && google.maps);
         initializeMap();
         getUserLocation();
     }, 500);
@@ -413,7 +416,7 @@ async function loadInitialData() {
     showLoading('Loading destinations...');
     
     try {
-        const response = await travelAPI.getDestinations(1, 100);
+        const response = await api.getPlaces();
         if (response.success) {
             allDestinations = response.places;
             filteredDestinations = [...allDestinations];
@@ -435,13 +438,13 @@ async function loadUserData() {
 
     try {
         // Load wishlist
-        const wishlistResponse = await travelAPI.getWishlist();
+        const wishlistResponse = await api.getWishlist();
         if (wishlistResponse.success) {
             updateWishlistUI(wishlistResponse.wishlist);
         }
 
         // Load trips
-        const tripsResponse = await travelAPI.getTrips();
+        const tripsResponse = await api.getTrips();
         if (tripsResponse.success) {
             updateTripsUI(tripsResponse.trips);
         }
@@ -734,7 +737,7 @@ async function filterDestinations(newFilters = {}) {
     const filters = { ...currentFilters, ...newFilters };
     
     try {
-        const response = await travelAPI.getDestinations(1, 100, filters);
+        const response = await api.getPlaces(filters);
         if (response.success) {
             filteredDestinations = response.places;
             renderDestinationCards();
@@ -840,9 +843,17 @@ function getDestinationEmoji(category) {
     };
     return emojis[category] || '📍';
 }
-
 function isInWishlist(destinationId) {
-    return currentUser && api.db.users.find(u => u.id === currentUser.id)?.wishlist.includes(destinationId);
+    if (!currentUser) return false;
+    
+    // Convert to number for comparison (handle string IDs from onclick)
+    const numId = parseInt(destinationId, 10);
+    const user = api.db.users.find(u => u.id === currentUser.id);
+    
+    if (!user || !user.wishlist) return false;
+    
+    // Check both numeric and potential string comparisons
+    return user.wishlist.includes(numId) || user.wishlist.includes(destinationId);
 }
 
 // ===========================================
@@ -1004,17 +1015,22 @@ function onWindowResize() {
 function initializeMap() {
     const mapContainer = document.getElementById('google-map');
     
-    // Improved fallback map display
+    if (!mapContainer) {
+        console.error('Map container not found');
+        return;
+    }
+    
+    // Wait for Google Maps API to load
     if (typeof google === 'undefined' || !google.maps) {
+        // Retry after 1 second if Google Maps not loaded
+        setTimeout(initializeMap, 1000);
+        
         mapContainer.innerHTML = 
             `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #00bcd4, #4a90e2); color: white; font-size: 18px; text-align: center; padding: 20px; border-radius: 8px; gap: 16px;">
-                <div style="font-size: 48px;">🗺️</div>
+                <div style="font-size: 48px;">⏳</div>
                 <div>
-                    <h3 style="margin: 0; font-size: 24px;">Interactive Travel Map</h3>
-                    <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">Google Maps integration ready for API key</p>
-                </div>
-                <div style="background: rgba(255,255,255,0.1); padding: 12px 20px; border-radius: 6px; font-size: 14px;">
-                    Route planning and navigation features available with Google Maps API
+                    <h3 style="margin: 0; font-size: 24px;">Loading Map...</h3>
+                    <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">Initializing Google Maps</p>
                 </div>
             </div>`;
         return;
@@ -1114,16 +1130,30 @@ function initializeMap() {
         });
 
     } catch (error) {
-        console.warn('Error initializing Google Maps:', error);
+        console.error('Error initializing Google Maps:', error);
         mapContainer.innerHTML = 
-            `<div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(45deg, #00bcd4, #4a90e2); color: white; font-size: 18px; text-align: center; padding: 20px; border-radius: 8px;">
-                🗺️<br>Interactive Map<br><small>Map services temporarily unavailable</small>
+            `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #ff6b6b, #ee5a6f); color: white; font-size: 18px; text-align: center; padding: 20px; border-radius: 8px; gap: 12px;">
+                <div style="font-size: 48px;">⚠️</div>
+                <div>
+                    <h3 style="margin: 0; font-size: 24px;">Map Error</h3>
+                    <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">Could not load Google Maps. Please check your connection or try refreshing the page.</p>
+                </div>
             </div>`;
     }
 }
 
 function addMarkersToMap() {
     if (!map || typeof google === 'undefined') return;
+    
+    // Use filtered destinations if available, otherwise use all
+    const destinationsToMark = (filteredDestinations && filteredDestinations.length > 0) 
+        ? filteredDestinations 
+        : allDestinations;
+    
+    if (!destinationsToMark || destinationsToMark.length === 0) {
+        console.warn('No destinations to add to map');
+        return;
+    }
     
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
@@ -1133,7 +1163,7 @@ function addMarkersToMap() {
     const markerCluster = new markerClusterer.MarkerClusterer({ map });
     const clusterMarkers = [];
 
-    filteredDestinations.forEach(destination => {
+    destinationsToMark.forEach(destination => {
         const marker = new google.maps.Marker({
             position: { lat: destination.lat, lng: destination.lng },
             title: destination.name,
@@ -1284,13 +1314,24 @@ function setImage(index) {
 
 async function showDestinationDetails(destinationId) {
     try {
-        const response = await travelAPI.getDestination(destinationId);
-        if (!response.success) {
-            showToast('Error loading destination details', 'error');
-            return;
+        // Convert to number for consistent matching
+        const numericId = parseInt(destinationId, 10);
+        
+        // Try API first, then fallback to local database
+        let destination;
+        const response = await api.getPlace(numericId);
+        
+        if (response.success) {
+            destination = response.place;
+        } else {
+            // Fallback to local database
+            destination = DATABASE.destinations.find(d => parseInt(d.id, 10) === numericId);
+            if (!destination) {
+                showToast('Destination not found', 'error');
+                return;
+            }
         }
         
-        const destination = response.place;
         currentDestination = destination;
         
         const modal = document.getElementById('destination-modal');
@@ -1333,7 +1374,7 @@ async function showDestinationDetails(destinationId) {
         `;
         
         // Load and display reviews
-        const reviewsResponse = await travelAPI.getReviews(destinationId);
+        const reviewsResponse = await api.getReviews(destinationId);
         if (reviewsResponse.success && reviewsResponse.reviews) {
             displayReviews(reviewsResponse.reviews);
         }
@@ -1407,18 +1448,18 @@ async function submitReview(event) {
     }
     
     try {
-        const response = await travelAPI.createReview(
-            currentDestination._id || currentDestination.id,
-            parseInt(rating),
-            comment
-        );
+        const response = await api.createReview({
+            placeId: currentDestination._id || currentDestination.id,
+            rating: parseInt(rating),
+            comment: comment
+        });
         
         if (response.success) {
             showToast('Review submitted successfully!', 'success');
             hideReviewForm();
             
             // Refresh reviews
-            const reviewsResponse = await travelAPI.getReviews(currentDestination._id || currentDestination.id);
+            const reviewsResponse = await api.getReviews(currentDestination._id || currentDestination.id);
             if (reviewsResponse.success) {
                 displayReviews(reviewsResponse.reviews);
             }
@@ -1448,13 +1489,15 @@ async function toggleWishlist(destinationId) {
     }
     
     try {
-        const isCurrentlyInWishlist = isInWishlist(destinationId);
+        // Ensure ID is numeric for consistency
+        const numericId = parseInt(destinationId, 10);
+        const isCurrentlyInWishlist = isInWishlist(numericId);
         let response;
         
         if (isCurrentlyInWishlist) {
-            response = await api.removeFromWishlist(destinationId);
+            response = await api.removeFromWishlist(numericId);
         } else {
-            response = await api.addToWishlist(destinationId);
+            response = await api.addToWishlist(numericId);
         }
         
         if (response.success) {
@@ -1478,7 +1521,7 @@ async function showWishlist() {
     }
     
     try {
-        const response = await travelAPI.getWishlist();
+        const response = await api.getWishlist();
         if (response.success) {
             filteredDestinations = response.wishlist;
             renderDestinationCards();
@@ -1603,15 +1646,22 @@ function updateTripsUI(trips) {
 // ===========================================
 
 function selectDestination(destinationId) {
-    const destination = filteredDestinations.find(d => d.id === destinationId);
+    // Convert to number for consistent matching
+    const numericId = parseInt(destinationId, 10);
+    const destination = filteredDestinations.find(d => parseInt(d.id, 10) === numericId) || 
+                       DATABASE.destinations.find(d => parseInt(d.id, 10) === numericId);
+    
     if (destination && map) {
         map.setCenter({ lat: destination.lat, lng: destination.lng });
         map.setZoom(12);
         
-        document.getElementById('map').scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'start'
-        });
+        const mapContainer = document.getElementById('google-map');
+        if (mapContainer) {
+            mapContainer.scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
     }
 }
 
@@ -1627,7 +1677,11 @@ function planRoute(destinationId) {
         return;
     }
     
-    const destination = filteredDestinations.find(d => (d._id || d.id) === destinationId) || DATABASE.destinations.find(d => (d._id || d.id) === destinationId);
+    // Convert to number for consistent matching
+    const numericId = parseInt(destinationId, 10);
+    const destination = filteredDestinations.find(d => parseInt(d.id, 10) === numericId) || 
+                       DATABASE.destinations.find(d => parseInt(d.id, 10) === numericId);
+    
     if (!destination) {
         showToast('Destination not found', 'error');
         return;
@@ -1641,10 +1695,12 @@ function planRoute(destinationId) {
     
     directionsService.route(request, (result, status) => {
         if (status === 'OK') {
+            currentRouteDestination = destination; // Track active route
             directionsRenderer.setDirections(result);
             displayRouteInfo(result.routes[0].legs[0], destination);
             showToast(`Route planned to ${destination.name}`, 'success');
         } else {
+            currentRouteDestination = null; // Clear if route fails
             showToast('Could not calculate route: ' + status, 'error');
         }
     });
@@ -1680,8 +1736,14 @@ function handleTravelModeChange(event) {
     });
     event.target.classList.add('active');
     
+    const previousMode = currentTravelMode;
     currentTravelMode = event.target.dataset.mode;
     showToast(`Travel mode changed to ${currentTravelMode}`, 'success');
+    
+    // Recalculate route if one is currently active
+    if (currentRouteDestination && directionsService && map) {
+        planRoute(currentRouteDestination.id);
+    }
 }
 
 function toggleTraffic() {
@@ -1700,6 +1762,8 @@ function toggleTraffic() {
 }
 
 function clearRoute() {
+    currentRouteDestination = null; // Clear tracked destination
+    
     if (directionsRenderer) {
         directionsRenderer.setDirections({ routes: [] });
     }
@@ -1767,12 +1831,20 @@ let currentGalleryIndex = 0;
 
 async function showQuickView(destinationId) {
     try {
+        // Convert to number for consistent matching
+        const numericId = parseInt(destinationId, 10);
+        
         // Find destination in all destinations or filtered list
-        let destination = allDestinations.find(d => d._id === destinationId || d.id === destinationId);
+        let destination = allDestinations.find(d => parseInt(d.id, 10) === numericId) || 
+                         allDestinations.find(d => d._id === destinationId);
+        
+        if (!destination) {
+            destination = DATABASE.destinations.find(d => parseInt(d.id, 10) === numericId);
+        }
         
         if (!destination) {
             // If not found locally, fetch from API
-            const response = await travelAPI.getDestination(destinationId);
+            const response = await api.getPlace(numericId);
             if (response.success) {
                 destination = response.place;
             } else {
@@ -1799,7 +1871,7 @@ async function showQuickView(destinationId) {
         document.getElementById('qv-description').textContent = destination.description;
         
         // Update wishlist button
-        const inWishlist = isInWishlist(destinationId);
+        const inWishlist = isInWishlist(numericId);
         const wishlistBtn = document.getElementById('qv-wishlist-btn');
         wishlistBtn.textContent = inWishlist ? '♥ In Wishlist' : '♡ Add to Wishlist';
         wishlistBtn.classList.toggle('active', inWishlist);
